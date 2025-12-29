@@ -6,17 +6,10 @@ public class DriveController : MonoBehaviour
 {
     [Header("EventListeners")]
     public ResourceEventSO GasEvent;
+    public ResourceEventSO HPEvent;
 
     [Header("Attributes")]
-    public float HP = 100;
-    public float MaxHP = 100;
-    public float Armor = 100;
-    public float MaxArmor = 100;
-    public float Gas = 100;
-    public float MaxGas = 100;
-    [Range(0, 10)]
-    public float GasConsumption = 1f;
-
+    private Character character;
     
     [Header("Input")]
     public float gasInput;
@@ -67,15 +60,17 @@ public class DriveController : MonoBehaviour
     private void OnEnable()
     {
         GasEvent.OnEventRaised += OnGasEvent;
+        HPEvent.OnEventRaised += OnHPEvent;
     }
     private void OnDisable()
     {
         GasEvent.OnEventRaised -= OnGasEvent;
+        HPEvent.OnEventRaised -= OnHPEvent;
     }
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        
+        character = GetComponent<Character>();
         // 配置 Rigidbody 以防止侧翻
         if (rb != null)
         {
@@ -96,10 +91,9 @@ public class DriveController : MonoBehaviour
     {
         // 应用防侧翻控制
         //PreventRollover();
-        if(Gas > 0)
+        if(character.Gas > 0)
         {
             Drive(gasInput, brakeInput, steeringInput);
-            Gas -= GasConsumption * Time.deltaTime;
         }
     }
     
@@ -139,55 +133,6 @@ public class DriveController : MonoBehaviour
         //ConstrainToNavMesh();
     }
 
-    /*private void ConstrainToNavMesh()
-    {
-        NavMeshHit hit = default;
-        float[] searchRadii = { navMeshTolerance, navMeshSearchRadius, navMeshSearchRadius * 2f };
-        
-        // 尝试不同搜索半径找到 NavMesh
-        bool foundNavMesh = false;
-        foreach (float radius in searchRadii)
-        {
-            if (NavMesh.SamplePosition(transform.position, out hit, radius, NavMesh.AllAreas))
-            {
-                foundNavMesh = true;
-                break;
-            }
-        }
-
-        if (!foundNavMesh) return;
-
-        float distance = Vector3.Distance(transform.position, hit.position);
-        float slopeAngle = Vector3.Angle(Vector3.up, hit.normal);
-        
-        // 检查是否需要调整位置
-        if (distance > navMeshTolerance + 0.2f && slopeAngle <= maxSlopeAngle)
-        {
-            Vector3 offset = hit.position - transform.position;
-            float verticalDistance = Mathf.Abs(offset.y);
-            float horizontalDistance = new Vector3(offset.x, 0, offset.z).magnitude;
-            
-            if (verticalDistance > 0.2f || horizontalDistance > 0.5f)
-            {
-                Vector3 newPosition = distance > 1f 
-                    ? hit.position 
-                    : Vector3.Lerp(transform.position, hit.position, Time.deltaTime * 10f);
-                
-                transform.position = newPosition;
-                rb.position = newPosition;
-
-                // 将速度投影到 NavMesh 表面
-                if (rb.linearVelocity.magnitude > 0.1f)
-                {
-                    Vector3 projectedVelocity = Vector3.ProjectOnPlane(rb.linearVelocity, hit.normal);
-                    if (projectedVelocity.magnitude > 0.01f)
-                    {
-                        rb.linearVelocity = projectedVelocity.normalized * rb.linearVelocity.magnitude;
-                    }
-                }
-            }
-        }
-    }*/
     public void OnAccelerate(InputValue button)
     {
         if(button.isPressed)
@@ -263,27 +208,20 @@ public class DriveController : MonoBehaviour
     {
         wheelColliders[0].attachedRigidbody.AddForce(-transform.up * Downforce * wheelColliders[0].attachedRigidbody.linearVelocity.magnitude);
     }
-    public void TakeDamage(float damage)
-    {
-        HP -= damage;
-        if(HP <= 0)
-        {
-            Destroy(gameObject);
-        }
-    }
+   
     public void OnGasEvent(float amount)
     {
-        Gas += amount;
-        if(Gas > MaxGas)
-        {
-            Gas = MaxGas;
-        }
+        character.GasRecovery(amount);
+    }
+    public void OnHPEvent(float amount)
+    {
+        character.HPRecovery(amount);
     }
     void OnTriggerEnter(Collider other)
     {
         if(other.CompareTag("Chaser"))
         {
-            TakeDamage(other.GetComponent<Chasing>().Damage);
+            character.TakeDamage(other.GetComponent<Chasing>().Damage);
         }
         /*if(other.CompareTag("Gas"))
         {

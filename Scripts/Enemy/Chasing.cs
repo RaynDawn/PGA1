@@ -20,7 +20,6 @@ public class Chasing : MonoBehaviour
     [Range(0, 100)] public float collisionForce = 10f; // 对Chaser施加的力的大小
     [Range(0, 1000)] public float recoilForce = 50f; // 撞击玩家后敌人受到的向后力的大小
     public float Damage = 10;
-    public float HP = 100;
     public float SelfDamage = 20;
     
     private NavMeshAgent agent;
@@ -30,11 +29,13 @@ public class Chasing : MonoBehaviour
     private Coroutine recoverCoroutine; // 恢复速度的协程引用
 
     public GameObject[] wheels;
+    private Character character;
 
-    void Start()
+    private void Start()
     {
         agent = GetComponent<NavMeshAgent>();
         rb = GetComponent<Rigidbody>();
+        character = GetComponent<Character>();
         
         // 禁用 NavMeshAgent 的自动移动，我们将手动控制
         agent.updatePosition = false;
@@ -44,7 +45,7 @@ public class Chasing : MonoBehaviour
         currentMoveSpeed = moveSpeed;
     }
 
-    void FixedUpdate()
+    private void FixedUpdate()
     {
         if (target == null) return;
 
@@ -70,7 +71,7 @@ public class Chasing : MonoBehaviour
     }
 
     // 检查是否在减速状态且距离玩家太近
-    bool ShouldKeepDistance()
+    private bool ShouldKeepDistance()
     {
         if (!isSlowedDown) return false;
         
@@ -85,7 +86,7 @@ public class Chasing : MonoBehaviour
     }
 
     // 朝目标点移动
-    void MoveTowards(Vector3 targetPoint)
+    private void MoveTowards(Vector3 targetPoint)
     {
         Vector3 direction = (targetPoint - transform.position);
         direction.y = 0; // 忽略垂直方向
@@ -117,7 +118,7 @@ public class Chasing : MonoBehaviour
     }
 
     // 转向目标位置
-    void LookAt(Vector3 position)
+    private void LookAt(Vector3 position)
     {
         Vector3 direction = position - transform.position;
         direction.y = 0; // 忽略垂直方向
@@ -129,7 +130,7 @@ public class Chasing : MonoBehaviour
     }
 
     // 将位置投影到最近的 NavMesh 位置
-    void SnapToNavMesh()
+    private void SnapToNavMesh()
     {
         if (NavMesh.SamplePosition(transform.position, out NavMeshHit hit, 5f, NavMesh.AllAreas))
         {
@@ -146,7 +147,7 @@ public class Chasing : MonoBehaviour
             wheels[i].transform.Rotate(-10, 0, 0);
         }
     }    
-    void OnTriggerEnter(Collider other)
+    private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
             PlayerCollision(other.gameObject);
@@ -155,7 +156,7 @@ public class Chasing : MonoBehaviour
     }
 
     // 处理与其他 Chaser 的碰撞
-    void ChaserCollision(GameObject chaser)
+    private void ChaserCollision(GameObject chaser)
     {
         Rigidbody chaserRb = chaser.GetComponent<Rigidbody>();
         if (chaserRb != null)
@@ -167,7 +168,7 @@ public class Chasing : MonoBehaviour
     }
 
     // 处理与Player的碰撞
-    void PlayerCollision(GameObject player)
+    private void PlayerCollision(GameObject player)
     {
         // 如果还没有减速，则开始减速
         if (!isSlowedDown)
@@ -193,21 +194,14 @@ public class Chasing : MonoBehaviour
             Vector3 recoilDirection = -forceDirection; // 向后方向
             rb.AddForce(recoilDirection * recoilForce, ForceMode.Impulse);
         }
-        TakeDamage(SelfDamage);
+        character.TakeDamage(SelfDamage);
         
         // 停止之前的协程（如果存在）并重新开始计时
         if (recoverCoroutine != null)
             StopCoroutine(recoverCoroutine);
         recoverCoroutine = StartCoroutine(RecoverSpeedAfterDelay());
     }
-    void TakeDamage(float damage)
-    {
-        HP -= damage;
-        if(HP <= 0)
-        {
-            Destroy(gameObject);
-        }
-    }
+    
     // 协程：延迟后恢复速度
     System.Collections.IEnumerator RecoverSpeedAfterDelay()
     {
