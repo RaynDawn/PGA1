@@ -54,7 +54,7 @@ public class Audio : MonoBehaviour
 
     void Update()
     {
-        // ��ȡ����ǰ���ٶ�
+        
         float forwardSpeed = 0f;
         if (drive != null)
         {
